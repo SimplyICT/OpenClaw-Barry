@@ -796,8 +796,8 @@ app.get("/setup/api/status", requireSetupAuth, async (_req, res) => {
           outputPrice: 1.20,
         },
         {
-          id: "zai-org/glm-4.7",
-          name: "GLM 4.7",
+          id: "zai-org/glm-5",
+          name: "GLM 5",
           description: "Chinese-optimized large language model",
           contextWindow: 202800,
           inputPrice: 0.52,
@@ -822,8 +822,8 @@ app.get("/setup/api/status", requireSetupAuth, async (_req, res) => {
       ],
       models: [
         {
-          id: "zai-org/GLM-4.7-Flash",
-          name: "GLM-4.7 Flash",
+          id: "zai-org/GLM-5-Flash",
+          name: "GLM-5 Flash",
           description: "Fast and efficient large language model",
           contextWindow: 131072,
           inputPrice: 0.00,
@@ -1338,7 +1338,7 @@ app.post("/setup/api/run", requireSetupAuth, async (req, res) => {
           models: [
             { id: "moonshotai/kimi-k2.5", name: "Moonshot Kimi K2.5" },
             { id: "minimaxai/minimax-m2.1", name: "MiniMax M2.1" },
-            { id: "zai-org/glm-4.7", name: "GLM 4.7" },
+            { id: "zai-org/glm-5", name: "GLM 5" },
             { id: "deepseek-ai/deepseek-v3.2", name: "DeepSeek V3.2" },
           ]
         };
@@ -1378,7 +1378,7 @@ app.post("/setup/api/run", requireSetupAuth, async (req, res) => {
           apiKey: "${OPENAI_API_KEY}",
           api: "openai-completions",
           models: [
-            { id: "zai-org/GLM-4.7-Flash", name: "GLM-4.7 Flash" },
+            { id: "zai-org/GLM-5-Flash", name: "GLM-5 Flash" },
             { id: "deepseek-ai/DeepSeek-V3.2", name: "DeepSeek V3.2" },
           ]
         };
