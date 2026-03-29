@@ -1214,6 +1214,11 @@ app.post("/setup/api/run", requireSetupAuth, async (req, res) => {
             clawArgs(["config", "get", "channels.telegram"]),
           );
           extra += `\n[telegram config] exit=${set.code} (output ${set.output.length} chars)\n${set.output || "(no output)"}`;
+          const setStreaming = await runCmd(
+            OPENCLAW_NODE,
+            clawArgs(["config", "set", "channels.telegram.streaming", "partial"]),
+          );
+          extra += `\n[telegram streaming] exit=${setStreaming.code} (output ${setStreaming.output.length} chars)\n${setStreaming.output || "(no output)"}`;
           extra += `\n[telegram verify] exit=${get.code} (output ${get.output.length} chars)\n${get.output || "(no output)"}`;
         }
       }
