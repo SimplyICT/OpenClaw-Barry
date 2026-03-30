@@ -12,14 +12,9 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile && pnpm store prune
 
-# Copy all skills (for dependency installation)
+# Copy all skills
 COPY skills /tmp/skills
 
-# Install patient-health-portal-helper skill dependencies
-WORKDIR /tmp/skills/patient-health-portal-helper/lib
-RUN npm install && npm cache clean --force
-
-# Return to app directory
 WORKDIR /app
 
 # Copy pre-built openclaw
