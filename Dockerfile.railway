@@ -3,6 +3,9 @@
 # Railway only pushes src/ + skills/ as new layers — keeps deploys fast.
 FROM ghcr.io/derekcheungsa/openclaw-railway-template-easy-config-base:latest
 
+# Force update to latest OpenClaw during build
+RUN npm install -g openclaw@latest
+
 WORKDIR /app
 COPY src ./src
 RUN mkdir -p /data/.openclaw
