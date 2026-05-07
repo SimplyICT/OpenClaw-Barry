@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/data/workspace/soc_engine/wazuh_foothold_bridge.py", line 4, in <module>
+    from soc_engine.threat_intel_bridge import check_file_hash
+ModuleNotFoundError: No module named 'soc_engine'

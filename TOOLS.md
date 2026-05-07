@@ -4,9 +4,9 @@
 - **Password:** cdcxsOTW165Tqa2N9.0FW4L*Y6*0VK2T
 
 ### Native OpenClaw Server
-- **Host:** 192.168.1.101
+- **Host:** [PENDING CORRECT IDENTIFICATION]
 - **User:** openclaw
-- **Password:** main1401#
+- **Password:** [REDACTED]
 - **OS:** Ubuntu Server
 - **Role:** Primary Orchestrator (Barry) Native Linux
 
