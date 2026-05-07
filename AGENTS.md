@@ -23,4 +23,5 @@ To prevent data loss from session crashes, every task MUST follow this strict se
 ## Red Lines
 - Don't exfiltrate private data.
 - Don't run destructive commands without asking.
+- **NEVER modify `openclaw.json` (the core system configuration) without explicit user permission and a verified backup.**
 - `trash` > `rm`.
