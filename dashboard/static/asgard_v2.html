@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>🛡️ Asgard High Command [FIXED]</title>
+    <title>🛡️ Asgard High Command [v2.0.1]</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --red: #ff1744; --gold: #ffca28; --green: #00e676; }
@@ -16,6 +16,10 @@
         .kpi { flex: 1; background: #111; border: 1px solid #222; padding: 15px; border-radius: 8px; text-align: center; }
         .agent-card { background: #16161a; border: 1px solid #333; padding: 12px; margin-bottom: 8px; border-radius: 6px; }
         .agent-card.responding { border-color: var(--red); box-shadow: 0 0 10px var(--red); }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th { text-align: left; padding: 12px; border-bottom: 1px solid var(--red); color: var(--gold); }
+        .data-table td { padding: 12px; border-bottom: 1px solid #222; font-size: 0.8rem; }
+        .severity-high { color: var(--red); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -39,7 +43,10 @@
 
     <div id="footholds" class="content">
         <h2>Persistent Footholds</h2>
-        <p>No persistence mechanism anomalies detected in the last scan.</p>
+        <table class="data-table">
+            <thead><tr><th>Detection</th><th>Tenant</th><th>Mechanism</th><th>Severity</th></tr></thead>
+            <tbody id="foothold-rows"><tr><td colspan="4" style="text-align:center">Scanning for persistence artifacts...</td></tr></tbody>
+        </table>
     </div>
 
     <div id="tenants" class="content">
@@ -65,7 +72,11 @@
             
             document.getElementById('list-monitoring').innerHTML = '';
             document.getElementById('list-responding').innerHTML = '';
+            const tbody = document.getElementById('foothold-rows');
+            tbody.innerHTML = '';
+            
             let active = 0;
+            let footholdsFound = false;
 
             squad.forEach(name => {
                 const log = logs.find(l => l.agent_name.toLowerCase().includes(name.toLowerCase())) || {status: 'ACTIVE', task_description: 'On watch.'};
@@ -80,6 +91,18 @@
                     document.getElementById('list-monitoring').appendChild(card);
                 }
             });
+
+            logs.forEach(log => {
+                if (log.task_description.toUpperCase().includes('FOOTHOLD')) {
+                    footholdsFound = true;
+                    const parts = log.task_description.split('||');
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${new Date(log.created_at).toLocaleTimeString()}</td><td>Simply ICT</td><td>${parts[0]}</td><td class="severity-high">HIGH</td>`;
+                    tbody.appendChild(tr);
+                }
+            });
+            if(!footholdsFound) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; opacity:0.5;">No active foothold detections.</td></tr>';
+
             document.getElementById('count').innerText = active;
         }
         setInterval(sync, 10000); sync();
