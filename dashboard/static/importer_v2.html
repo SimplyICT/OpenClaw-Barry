@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🦞 Asgard CSV Importer (v1.2 - DEBUG)</title>
+    <title>🦞 Asgard CSV Importer (v1.3)</title>
     <style>
         body { font-family: sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; background-color: #f4f4f9; }
         .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -14,16 +14,15 @@
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background: #f8f8f8; }
         .status { margin-top: 20px; font-family: monospace; font-size: 0.9em; padding: 10px; background: #333; color: #0f0; border-radius: 4px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; }
-        .header-debug { background: #e8f5e9; padding: 10px; border: 1px solid #2e7d32; border-radius: 4px; margin-bottom: 10px; font-family: monospace; }
         button { background: #d32f2f; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 15px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2>🚀 Site Audit Device Importer (v1.2)</h2>
-        <div id="headerNotice" class="header-debug" style="display:none;">Detected Headers: <span id="actualHeaders"></span></div>
+        <h2>🚀 Site Audit Device Importer (v1.3)</h2>
+        <p>Populating <strong>site_audit_devices</strong> table.</p>
 
-        <label>Target Site Name</label>
+        <label>Target Site Name (for client_id)</label>
         <input type="text" id="targetSite" value="Benowa ELC" style="margin-bottom: 20px; font-size: 1.1em; padding: 10px; width: 100%; border: 1px solid #ccc; border-radius: 4px;">
 
         <div class="upload-zone" onclick="document.getElementById('csvInput').click()">
@@ -48,20 +47,15 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let csvData = [];
-        let rawHeaders = [];
 
         document.getElementById('csvInput').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            
             Papa.parse(file, {
                 header: true,
                 skipEmptyLines: 'greedy',
                 complete: (results) => {
                     csvData = results.data;
-                    rawHeaders = results.meta.fields;
-                    document.getElementById('headerNotice').style.display = 'block';
-                    document.getElementById('actualHeaders').innerText = JSON.stringify(rawHeaders);
                     renderPreview();
                 }
             });
@@ -78,47 +72,46 @@
         }
 
         async function runImport() {
-            const site = document.getElementById('targetSite').value;
+            const client = document.getElementById('targetSite').value;
             const btn = document.getElementById('importBtn');
             btn.disabled = true;
             const logPanel = document.getElementById('log');
             logPanel.style.display = 'block';
-            logPanel.innerText = "Processing rows...\n";
+            logPanel.innerText = "Starting import for client: " + client + "\n";
 
             for (let i = 0; i < csvData.length; i++) {
                 const row = csvData[i];
                 let name = "", serial = "", type = "Laptop";
 
-                // Exhaustive manual check for headers since Papa headers are case-sensitive
                 for (let key in row) {
                     const cleanKey = key.trim().toLowerCase();
                     const val = (row[key] || "").trim();
-                    
                     if (['serial', 'sn', 'serial number', 'serial_number', 'asset'].includes(cleanKey)) serial = val;
-                    if (['name', 'device', 'device name', 'friendly name', 'room'].includes(cleanKey)) name = val;
+                    if (['name', 'device', 'device name', 'friendly name', 'room', 'assigned user/room'].includes(cleanKey)) name = val;
                     if (['type', 'device type'].includes(cleanKey)) type = val;
                 }
 
                 if (!serial) {
-                    logPanel.innerText += `Row ${i+1}: FAILED. No Serial. Values found: ${JSON.stringify(row)}\n`;
+                    logPanel.innerText += `Row ${i+1}: Skipped (No Serial)\n`;
                     continue;
                 }
 
+                // IMPORTANT: TABLE USES client_id, serial, name, type
                 const { error } = await _supabase.from('site_audit_devices').upsert({
-                    site_name: site,
+                    client_id: client,
                     name: name || `Device ${serial.slice(-4)}`,
                     serial: serial,
                     type: type || "Laptop"
-                }, { onConflict: 'site_name, serial' });
+                }, { onConflict: 'client_id, serial' });
 
                 if (error) {
-                    logPanel.innerText += `Row ${i+1} [${serial}]: DB Error - ${error.message}\n`;
+                    logPanel.innerText += `Row ${i+1} [${serial}]: ERROR - ${error.message}\n`;
                 } else {
-                    logPanel.innerText += `Row ${i+1} [${serial}]: IMPORTED\n`;
+                    logPanel.innerText += `Row ${i+1} [${serial}]: Success\n`;
                 }
                 logPanel.scrollTop = logPanel.scrollHeight;
             }
-            logPanel.innerText += "\n--- FINISHED ---";
+            logPanel.innerText += "\n--- IMPORT COMPLETE ---";
         }
     </script>
 </body>
