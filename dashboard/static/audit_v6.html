@@ -87,10 +87,12 @@
         async function refreshDeviceNames() {
             const site = siteSelect.value;
             deviceNameLookup.innerHTML = '<option value="">-- Loading... --</option>';
-            const { data } = await _supabase.from('site_audit_devices').select('name, serial_number').eq('site_name', site).order('name');
+            // Note: Field name is "serial" in the site_audit_devices table
+            const { data, error } = await _supabase.from('site_audit_devices').select('name, serial').eq('site_name', site).order('name');
+            if (error) console.error(error);
             if (data && data.length > 0) {
                 deviceNameLookup.innerHTML = '<option value="">-- Select Name --</option>' + 
-                    data.map(d => `<option value="${d.serial_number}">${d.name}</option>`).join('');
+                    data.map(d => `<option value="${d.serial}">${d.name}</option>`).join('');
             } else {
                 deviceNameLookup.innerHTML = '<option value="">-- No Devices Found --</option>';
             }
