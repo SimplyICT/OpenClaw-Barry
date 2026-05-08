@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🛡️ Asgard Audit v16.0</title>
+    <title>🛡️ Asgard Audit v16.1</title>
     <style>
         body { font-family: sans-serif; max-width: 1300px; margin: 20px auto; padding: 0 10px; background-color: #f4f4f9; }
         .container { display: grid; grid-template-columns: 450px 1fr; gap: 20px; }
@@ -15,10 +15,11 @@
         button { background-color: #d32f2f; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; font-weight: bold; }
         .status-bar { background: #333; color: #0f0; padding: 8px; font-family: monospace; font-size: 0.75em; border-radius: 4px; margin-bottom: 10px; }
         .lookup-box { background: #e3f2fd; padding: 15px; border-radius: 4px; margin-bottom: 15px; border: 1px solid #1976d2; }
+        .audit-header { color: #d32f2f; font-weight: bold; padding-top: 15px; border-top: 1px solid #eee; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <h2>🛡️ Asgardian Audit Hub (v16.0)</h2>
+    <h2>🛡️ Asgardian Audit Hub (v16.1)</h2>
     <div id="statLog" class="status-bar">System: Operational</div>
     
     <div class="container">
@@ -36,7 +37,7 @@
                     </div>
                     <div>
                         <label>Lookup by Room/Name</label>
-                        <select id="nameLookup"><option value="">-- Load Site First --</option></select>
+                        <select id="nameLookup"><option value="">-- Loading... --</option></select>
                     </div>
                     <div class="full-width">
                         <button onclick="performLookup()" style="background:#1976d2; width:100%; margin-top:5px;">🔍 FIND & LOAD</button>
@@ -51,14 +52,21 @@
                     <div><label>Brand/Model</label><input type="text" name="brand_model" id="brandField"></div>
                     <div><label>Assigned Room</label><input type="text" name="assigned_user_room" id="roomField"></div>
                     
-                    <div class="full-width audit-header" style="border-top:1px solid #eee; margin-top:10px; padding-top:10px; color:#d32f2f; font-weight:bold;">Compliance Check</div>
-                    <div class="full-width"><label>Audit Notes</label><textarea name="notes" rows="3"></textarea></div>
+                    <div class="full-width audit-header">Compliance Data</div>
                     <div><label>Windows OS</label><input type="text" name="windows_os"></div>
                     <div><label>iOS Version</label><input type="text" name="ios_version"></div>
+                    <div><label>Updates Status</label><input type="text" name="update_status"></div>
                     <div><label>Security Check</label><input type="text" name="security_check" value="PASS"></div>
-                    <div><label>Update Status</label><input type="text" name="update_status" value="OK"></div>
+                    
+                    <div><label>Camera Sync Off</label><select name="camera_sync_off"><option value="true">Yes</option><option value="false" selected>No</option></select></div>
+                    <div><label>OneDrive Sync On</label><select name="onedrive_sync_on"><option value="true" selected>Yes</option><option value="false">No</option></select></div>
+                    
+                    <div><label>Photos Count</label><input type="number" name="photos_count"></div>
+                    <div><label>Photos Date</label><input type="date" name="photos_date"></div>
+                    
+                    <div class="full-width"><label>Audit Notes</label><textarea name="notes" rows="4"></textarea></div>
                 </div>
-                <button type="submit" style="width:100%; margin-top:20px; background:#1b5e20;">COMMIT AUDIT</button>
+                <button type="submit" style="width:100%; margin-top:20px; background:#1b5e20;">COMMIT AUDIT RECORD</button>
             </form>
         </div>
 
@@ -76,11 +84,8 @@
 
         async function refreshNames() {
             const site = document.getElementById('siteSelect').value;
-            // Lookup existing devices from the master list (devices table) 
-            // filtered by those who have audit entries for this site
             const { data: entries } = await _supabase.from('audit_entries').select('serial_number').eq('site_name', site);
             const serials = (entries || []).map(e => e.serial_number);
-            
             const { data: devices } = await _supabase.from('devices').select('serial_number, assigned_user_room').in('serial_number', serials).order('assigned_user_room');
             
             const nameDropdown = document.getElementById('nameLookup');
@@ -96,9 +101,7 @@
             const sn = document.getElementById('snLookup').value.trim();
             const selectedSN = document.getElementById('nameLookup').value;
             const targetSN = sn || selectedSN;
-
             if (!targetSN) return;
-
             const { data } = await _supabase.from('devices').select('*').eq('serial_number', targetSN).maybeSingle();
             if (data) {
                 document.getElementById('serial_num').value = data.serial_number;
@@ -106,8 +109,6 @@
                 document.getElementById('roomField').value = data.assigned_user_room || "";
                 document.getElementById('typeField').value = data.device_type || "";
                 loadHistory(targetSN);
-            } else {
-                alert("Device not found in master inventory.");
             }
         }
 
@@ -126,16 +127,17 @@
             e.preventDefault();
             const raw = Object.fromEntries(new FormData(e.target).entries());
             const site = document.getElementById('siteSelect').value;
-            
             try {
                 const { error } = await _supabase.from('audit_entries').insert([{ 
                     ...raw, 
                     site_name: site,
-                    audit_date: new Date().toISOString().split('T')[0]
+                    audit_date: new Date().toISOString().split('T')[0],
+                    camera_sync_off: raw.camera_sync_off === 'true',
+                    onedrive_sync_on: raw.onedrive_sync_on === 'true',
+                    photos_count: parseInt(raw.photos_count) || 0
                 }]);
                 if (error) throw error;
                 alert("Audit Logged!");
-                refreshNames();
                 loadHistory(raw.serial_number);
             } catch (err) { alert("Error: " + err.message); }
         });
