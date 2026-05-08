@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛡️ Asgard Audit v13.0</title>
+    <style>
+        body { font-family: sans-serif; max-width: 1300px; margin: 20px auto; padding: 0 10px; background-color: #f4f4f9; }
+        .container { display: grid; grid-template-columns: 450px 1fr; gap: 20px; }
+        form, .history-panel, .site-manager { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .full-width { grid-column: span 2; }
+        label { display: block; margin: 8px 0 4px; font-weight: bold; font-size: 0.8em; color:#444; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #d32f2f; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; font-weight: bold; }
+        h2, h3 { color: #333; border-bottom: 2px solid #d32f2f; padding-bottom: 5px; }
+        .status-bar { background: #333; color: #0f0; padding: 8px; font-family: monospace; font-size: 0.75em; border-radius: 4px; margin-bottom: 10px; }
+        .selected-banner { background: #e3f2fd; padding: 10px; border-left: 5px solid #1976d2; margin-bottom: 15px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h2>🛡️ Asgardian Audit Hub (v13.0)</h2>
+    <div id="statLog" class="status-bar">System: IDLE</div>
+    <div class="container">
+        <div class="form-panel">
+            <div class="site-manager">
+                <label>Active Site</label>
+                <select id="siteSelect"><option value="">-- Loading --</option></select>
+                <div style="display:flex; gap:5px; margin-top:10px;">
+                    <button id="modeRecall" onclick="setMode('recall')" style="flex:1;">Recall</button>
+                    <button id="modeNew" onclick="setMode('new')" style="flex:1; background:#444;">Add New</button>
+                </div>
+            </div>
+
+            <div id="recallArea">
+                <label>Recall Device by Friendly Name</label>
+                <select id="deviceNameLookup"><option value="">-- Select --</option></select>
+            </div>
+
+            <div id="newArea" style="display:none;">
+                <label>New Friendly Name</label>
+                <input type="text" id="newNameInput" placeholder="iPad 4, Kitchen PC...">
+            </div>
+
+            <form id="auditForm">
+                <div class="grid">
+                    <div class="full-width"><label>Serial Number (Verified)</label><input type="text" id="serial_number" name="serial_number" required></div>
+                    <div><label>Type</label><div id="typeDiv"><input type="text" name="device_type" id="typeIn" readonly style="background:#eee;"></div></div>
+                    <div><label>Brand/Model</label><input type="text" name="brand_model" id="brandField"></div>
+                    <div class="full-width"><label>Notes</label><textarea name="notes" rows="4"></textarea></div>
+                    <!-- Compliance fields here -->
+                    <div><label>Windows OS</label><input type="text" name="windows_os" id="winIn"></div>
+                    <div><label>iOS Ver</label><input type="text" name="ios_version" id="iosIn"></div>
+                </div>
+                <button type="submit" style="width:100%; margin-top:20px; background:#1b5e20;">COMMIT LOG</button>
+            </form>
+        </div>
+        <div class="history-panel">
+            <div id="historyTarget">History shows here.</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://zhvxjuhgfudavxrfsasn.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_6RNTxeaqITfQxj1mCF263Q_5E_n-4Yb';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let mode = 'recall';
+
+        async function init() {
+            const { data } = await _supabase.from('sites').select('site_name').order('site_name');
+            document.getElementById('siteSelect').innerHTML = data.map(s => `<option value="${s.site_name}">${s.site_name}</option>`).join('');
+            refreshRecall();
+        }
+
+        async function refreshRecall() {
+            const site = document.getElementById('siteSelect').value;
+            const log = document.getElementById('statLog');
+            log.innerText = `Filtering for site: ${site}...`;
+
+            // Step 1: Find serials associated with this site in audit_entries
+            const { data: entries } = await _supabase.from('audit_entries').select('serial_number').eq('site_name', site);
+            const validSerials = entries ? [...new Set(entries.map(e => e.serial_number))] : [];
+
+            // Step 2: Fetch data from site_audit_devices for those serials
+            const { data: devices } = await _supabase.from('site_audit_devices').select('name, serial, type').in('serial', validSerials);
+            
+            const lookup = document.getElementById('deviceNameLookup');
+            if (devices && devices.length > 0) {
+                lookup.innerHTML = '<option value="">-- Select Device --</option>' + 
+                    devices.map(d => `<option value="${d.serial}" data-type="${d.type}">${d.name}</option>`).join('');
+                log.innerText = `Site Ready: ${devices.length} devices loaded.`;
+            } else {
+                lookup.innerHTML = '<option value="">-- No Devices for Site --</option>';
+                log.innerText = "No recall names found for this site yet.";
+            }
+        }
+
+        document.getElementById('deviceNameLookup').addEventListener('change', async (e) => {
+            const sn = e.target.value;
+            if (!sn) return;
+            const opt = e.target.options[e.target.selectedIndex];
+            
+            // Populate Fields from Recall selection
+            document.getElementById('serial_number').value = sn;
+            document.getElementById('typeIn').value = opt.getAttribute('data-type') || "";
+            
+            // Deep Fetch from devices table to get extra info (Brand/Model, etc)
+            const { data: master } = await _supabase.from('devices').select('*').eq('serial_number', sn).maybeSingle();
+            if (master) {
+                document.getElementById('brandField').value = master.brand_model || "";
+                document.getElementById('typeIn').value = master.device_type || opt.getAttribute('data-type');
+            }
+        });
+
+        document.getElementById('siteSelect').addEventListener('change', refreshRecall);
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('recallArea').style.display = m === 'recall' ? 'block' : 'none';
+            document.getElementById('newArea').style.display = m === 'new' ? 'block' : 'none';
+            document.getElementById('typeDiv').innerHTML = m === 'new' ? '<select name="device_type"><option>Laptop</option><option>Tablet</option></select>' : '<input type="text" name="device_type" id="typeIn" readonly style="background:#eee;">';
+        }
+
+        init();
+    </script>
+</body>
+</html>
