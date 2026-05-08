@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛡️ Asgard Audit v14.0</title>
+    <style>
+        body { font-family: sans-serif; max-width: 1300px; margin: 20px auto; padding: 0 10px; background-color: #f4f4f9; }
+        .container { display: grid; grid-template-columns: 450px 1fr; gap: 20px; }
+        form, .history-panel, .site-manager { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .full-width { grid-column: span 2; }
+        label { display: block; margin: 8px 0 4px; font-weight: bold; font-size: 0.8em; color:#444; }
+        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #d32f2f; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; font-weight: bold; }
+        h2, h3 { color: #333; border-bottom: 2px solid #d32f2f; padding-bottom: 5px; }
+        .status-bar { background: #333; color: #0f0; padding: 8px; font-family: monospace; font-size: 0.75em; border-radius: 4px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h2>🛡️ Asgardian Audit Hub (v14.0)</h2>
+    <div id="statLog" class="status-bar">Initializing Recall...</div>
+    <div class="container">
+        <div class="form-panel">
+            <div class="site-manager">
+                <label>Select Audit Target Site</label>
+                <select id="siteSelect"><option value="">-- Loading Sites --</option></select>
+            </div>
+
+            <div id="recallArea">
+                <label>Recall Hardware by Name (Master Recall)</label>
+                <select id="deviceNameLookup"><option value="">-- Loading Global List --</option></select>
+            </div>
+
+            <form id="auditForm">
+                <div class="grid">
+                    <div class="full-width"><label>Serial Number (Verified)</label><input type="text" id="serial_number" name="serial_number" required readonly style="background:#eee;"></div>
+                    <div><label>Device Type</label><input type="text" name="device_type" id="typeIn" readonly style="background:#eee;"></div>
+                    <div><label>Brand/Model</label><input type="text" name="brand_model" id="brandField"></div>
+                    
+                    <div class="full-width" style="margin-top:10px; border-top: 1px solid #ddd; padding-top:10px;">
+                        <label>Action Taken</label>
+                        <select name="action_type">
+                            <option value="Annual Audit">Annual Audit</option>
+                            <option value="Replacement">Replacement</option>
+                            <option value="Maintenance">Maintenance</option>
+                        </select>
+                    </div>
+
+                    <div class="full-width"><label>Audit Notes</label><textarea name="notes" rows="4"></textarea></div>
+                    <div><label>Windows OS</label><input type="text" name="windows_os"></div>
+                    <div><label>iOS Version</label><input type="text" name="ios_version"></div>
+                    <div><label>Security Check</label><input type="text" name="security_check"></div>
+                    <div><label>Update Status</label><input type="text" name="update_status"></div>
+                </div>
+                <button type="submit" style="width:100%; margin-top:20px; background:#1b5e20;">SAVE AUDIT TO DATABASE</button>
+            </form>
+        </div>
+        <div class="history-panel">
+            <h3>Site History: <span id="historyHeader">None</span></h3>
+            <div id="historyTarget">Select device to view previous logs.</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://zhvxjuhgfudavxrfsasn.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_6RNTxeaqITfQxj1mCF263Q_5E_n-4Yb';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function init() {
+            // Load Sites
+            const { data: sites } = await _supabase.from('sites').select('site_name').order('site_name');
+            document.getElementById('siteSelect').innerHTML = sites.map(s => `<option value="${s.site_name}">${s.site_name}</option>`).join('');
+            
+            // Load Universal Names for Recall
+            const log = document.getElementById('statLog');
+            const { data: names } = await _supabase.from('site_audit_devices').select('name, serial, type').order('name');
+            if (names) {
+                document.getElementById('deviceNameLookup').innerHTML = '<option value="">-- Select Hardware Name --</option>' + 
+                    names.map(n => `<option value="${n.serial}" data-type="${n.type}">${n.name}</option>`).join('');
+                log.innerText = `System Ready: ${names.length} hardware profiles loaded globably.`;
+            }
+        }
+
+        document.getElementById('deviceNameLookup').addEventListener('change', async (e) => {
+            const sn = e.target.value;
+            if (!sn) return;
+            const opt = e.target.options[e.target.selectedIndex];
+            
+            // Fill from recall list
+            document.getElementById('serial_number').value = sn;
+            document.getElementById('typeIn').value = opt.getAttribute('data-type') || "Unknown";
+            
+            // Link to master devices for Brand/Model
+            const { data } = await _supabase.from('devices').select('*').eq('serial_number', sn).maybeSingle();
+            if (data) {
+                document.getElementById('brandField').value = data.brand_model || "";
+                document.getElementById('typeIn').value = data.device_type || opt.getAttribute('data-type');
+            }
+            loadHistory(sn);
+        });
+
+        async function loadHistory(sn) {
+            const { data } = await _supabase.from('audit_entries').select('*').eq('serial_number', sn).order('audit_date', { ascending: false });
+            const target = document.getElementById('historyTarget');
+            if (data && data.length > 0) {
+                let html = '<table><tr><th>Date</th><th>Site</th><th>Notes</th></tr>';
+                data.forEach(row => { html += `<tr><td>${row.audit_date||'N/A'}</td><td>${row.site_name}</td><td>${row.notes || ''}</td></tr>`; });
+                target.innerHTML = html + '</table>';
+            } else { target.innerHTML = "No previous audit history available."; }
+        }
+
+        document.getElementById('auditForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const raw = Object.fromEntries(new FormData(document.getElementById('auditForm')).entries());
+            const site = document.getElementById('siteSelect').value;
+            
+            try {
+                // Committed audit log entry
+                const { error } = await _supabase.from('audit_entries').insert([{ 
+                    ...raw, 
+                    site_name: site,
+                    audit_date: new Date().toISOString().split('T')[0]
+                }]);
+                if (error) throw error;
+                alert("Audit Committed Successfully!");
+                loadHistory(raw.serial_number);
+            } catch (err) { alert("Failed: " + err.message); }
+        });
+
+        init();
+    </script>
+</body>
+</html>
