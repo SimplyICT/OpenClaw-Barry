@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🛡️ SOC Monitor : Hemidall [v1.0]</title>
+    <style>
+        :root {
+            --primary-blue: #2196f3;
+            --terminal-cyan: #00e5ff;
+            --text-gold: #ffca28;
+            --dark-bg: #0a0a0c;
+            --panel-bg: rgba(20, 20, 25, 0.95);
+        }
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--dark-bg);
+            color: var(--terminal-cyan);
+            padding: 20px;
+            text-transform: uppercase;
+        }
+        .header { border-bottom: 2px solid var(--primary-blue); padding: 10px; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .card { background-color: var(--panel-bg); border: 1px solid var(--primary-blue); padding: 15px; min-height: 200px; }
+        .alert-card { border-color: #ff1744; }
+        .status-active { color: #00e676; }
+        .status-fail { color: #ff1744; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+        th, td { border: 1px solid rgba(33, 150, 243, 0.3); padding: 8px; text-align: left; }
+        th { color: var(--text-gold); }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h1>🛡️ Asgardian SOC : Heimdall Monitor [v1.0]</h1>
+            <a href="../index_v1.html" style="background:var(--primary-blue); color:white; text-decoration:none; padding:8px 15px; font-weight:bold; border-radius:4px; font-size:0.8em; border: 1px solid var(--terminal-cyan);">🔙 MISSION CONTROL</a>
+        </div>
+        <div style="color: var(--text-gold);">[ SYSTEM_LINK: ACTIVE // SOURCE: SECURESOCCENTRAL ]</div>
+    </div>
+    <div class="grid">
+        <div class="card">
+            <h2>🛰️ Active Security Agents</h2>
+            <div id="agentList">Loading agent data...</div>
+        </div>
+        <div class="card alert-card">
+            <h2>🚨 Security Hot-List</h2>
+            <div id="statusIndicator">Checking Link...</div>
+            <div id="alertFeed" style="margin-top:20px; font-size: 0.8em;"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://zhvxjuhgfudavxrfsasn.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_6RNTxeaqITfQxj1mCF263Q_5E_n-4Yb';
+        const { createClient } = supabase;
+        const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function fetchAgentStatus() {
+             // We pull the latest SOC audit logs from Supabase
+             const { data: logs } = await _supabase.from('agent_logs')
+                .select('*')
+                .eq('agent_name', 'Lady Sif')
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+             if (logs && logs.length > 0) {
+                 document.getElementById('statusIndicator').innerHTML = '<span class="status-active">● LINK SECURE</span>';
+                 document.getElementById('alertFeed').innerHTML = logs.map(l => `
+                    <div style="margin-bottom:10px; border-bottom:1px dashed #ff1744; padding-bottom:5px;">
+                        [${new Date(l.created_at).toLocaleTimeString()}] ${l.task_description}
+                    </div>`).join('');
+             } else {
+                 document.getElementById('statusIndicator').innerHTML = '<span class="status-fail">● NO TELEMETRY</span>';
+             }
+        }
+
+        async function updateView() {
+            // Mocking agent list for now based on the last Wazuh handshake
+            const agents = ["ssdnodes-testing", "mydesktop", "OCS-Inventory", "ITFlow", "Docker-2", "workstation-office", "RELC-Remote-Mini"];
+            document.getElementById('agentList').innerHTML = '<table><tr><th>ID</th><th>NODE_NAME</th><th>STATUS</th></tr>' + 
+                agents.map((a, i) => `<tr><td>0${i}</td><td>${a}</td><td><span class="status-active">ACTIVE</span></td></tr>`).join('') + '</table>';
+        }
+
+        window.onload = () => {
+            updateView();
+            fetchAgentStatus();
+            setInterval(fetchAgentStatus, 15000);
+        };
+    </script>
+</body>
+</html>
