@@ -29,14 +29,10 @@
     <div class="container">
         <div class="form-panel">
             <div class="site-manager">
-                <h3>Site Selection & Report Generation</h3>
+                <h3>Site Selection</h3>
                 <label>Active Audit Site</label>
                 <div style="display:flex; gap:5px;">
                     <select id="siteSelect"><option value="Benowa ELC">Benowa ELC</option></select>
-                </div>
-                <div style="margin-top:20px; background:#e3f2fd; padding:10px; border:1px solid #1976d2; border-radius:5px;">
-                    <button id="btnDownload" onclick="triggerDownload()" style="width:100%; font-size:1.1em;">📥 DOWNLOAD DOCX FILE</button>
-                    <div id="reportStatus" style="font-size:0.75em; margin-top:8px; font-family:monospace; color:#1976d2; text-align:center;">[ STANDBY ]</div>
                 </div>
             </div>
             <form id="auditForm">
@@ -71,6 +67,11 @@
             <div id="sessionLogTarget" style="margin-bottom: 20px; border-bottom: 2px solid #1976d2; padding-bottom: 10px;"><div style="font-size:0.8em; color:#666;">Waiting for site data...</div></div>
             <h3>Site & Device Audit Logs (Full History)</h3>
             <div id="historyTarget">Select a site and serial number to view historical records.</div>
+            
+            <div class="site-manager" style="margin-top:20px; background:#e3f2fd; padding:10px; border:1px solid #1976d2; border-radius:5px;">
+                <button id="btnDownload" onclick="triggerDownload()" style="width:100%; font-size:1.1em;">📥 DOWNLOAD DOCX FILE</button>
+                <div id="reportStatus" style="font-size:0.75em; margin-top:8px; font-family:monospace; color:#1976d2; text-align:center;">[ STANDBY ]</div>
+            </div>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -92,7 +93,6 @@
             btn.disabled = true; btn.innerText = "⌛ REQUESTING..."; status.innerText = "[ REQUESTING_GENERATION ]";
             
             try {
-                // We use the same report_requests table but the backend will generate the file
                 const { data, error } = await _supabase.from('report_requests').insert([{ site_name: siteName, target_date: today, status: 'PENDING' }]).select();
                 if (error) throw error;
                 const reqId = data[0].id;
