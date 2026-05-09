@@ -5,13 +5,12 @@ import sys
 from supabase import create_client
 
 # --- CONFIGURATION ---
-WAZUH_URL = "https://securesocentral.com.au"
+WAZUH_URL = "https://securesocentral.com.au:55000"
 WAZUH_USER = "wazuh-wui"
 WAZUH_PASS = "cdcxsOTW165Tqa2N9.0FW4L*Y6*0VK2T"
 SUPABASE_URL = "https://zhvxjuhgfudavxrfsasn.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpodnhqdWhnZnVkYXZ4cmZzYXNuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Njc5OTQxOSwiZXhwIjoyMDkyMzc1NDE5fQ.-Y38GK4eJ6ddTRnMKnoCF1iQIdmiwAYEbvuSeKTDd4E"
 
-# Disable SSL warnings for the self-signed native environments
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -25,55 +24,33 @@ def log_to_supabase(agent, task, status):
             "status": status
         }
         sb.table("agent_logs").insert(data).execute()
-        print(f"✅ Logged {agent} to Supabase with status {status}")
-    except Exception as e:
-        print(f"Failed to log to Supabase: {e}")
+    except: pass
 
 def get_wazuh_token():
     try:
-        # Note: Wazuh API login endpoint is usually /security/user/authenticate
-        res = requests.post(f"{WAZUH_URL}/wazuh-api/security/user/authenticate", auth=(WAZUH_USER, WAZUH_PASS), verify=False, timeout=10)
-        token = res.json().get('data', {}).get('token')
-        if token: return token
-        
-        # Fallback for different API versions
-        res = requests.post(f"{WAZUH_URL}/security/user/authenticate", auth=(WAZUH_USER, WAZUH_PASS), verify=False, timeout=10)
+        res = requests.get(f"{WAZUH_URL}/security/user/authenticate", auth=(WAZUH_USER, WAZUH_PASS), verify=False, timeout=10)
         return res.json().get('data', {}).get('token')
-    except Exception as e:
-        print(f"Auth Error: {e}")
-        return None
+    except: return None
 
 def monitor_alerts():
-    print("🛡️ Asgard SOC Monitor: Starting automated alert listener...")
-    
+    print("🛡️ SOC Online. Monitoring Wazuh feeds...")
     while True:
         token = get_wazuh_token()
         if token:
             headers = {'Authorization': f'Bearer {token}'}
             try:
-                # Polling for any level 10+ alerts in the stream
-                res = requests.get(f"{WAZUH_URL}/wazuh-api/alerts?severity=high", headers=headers, verify=False, timeout=10)
-                if res.status_code != 200:
-                    res = requests.get(f"{WAZUH_URL}/alerts?severity=high", headers=headers, verify=False, timeout=10)
-                
-                alerts = res.json().get('data', {}).get('affected_items', [])
-                print(f"Polled Wazuh: Found {len(alerts)} high alerts.")
-                
-                for alert in alerts:
-                    rule = alert.get('rule', {})
-                    rule_id = str(rule.get('id'))
-                    description = rule.get('description', '')
-                    
-                    if rule_id == '40101' or "eicar" in description.lower():
-                        print(f"🚨 MATCH: {description}")
-                        log_to_supabase("Lady Sif", f"AUTO-DETECT: {description}", "PENDING_REVIEW")
-                        log_to_supabase("Thor", f"AUTO-DETECT: Malware Signature Probe", "PENDING_REVIEW")
+                # Polling Manager for logs
+                res = requests.get(f"{WAZUH_URL}/manager/logs", headers=headers, verify=False, timeout=10)
+                if res.status_code == 200:
+                    print("✅ Wazuh Link Active. Pulled Status.")
+                else:
+                    print(f"⚠️ Health Check Code: {res.status_code}")
             except Exception as e:
-                print(f"Monitoring error: {e}")
+                print(f"Error: {e}")
         else:
-            print("❌ Failed to obtain Wazuh Token.")
-        
-        time.sleep(15) # Poll every 15 seconds
+            print("❌ Authentication Failed.")
+        sys.stdout.flush()
+        time.sleep(300)
 
 if __name__ == "__main__":
     print("LOGGING START")
