@@ -6,9 +6,9 @@ StartLimitBurst=5
 StartLimitIntervalSec=60
 
 [Service]
-# We've switched back to a System Service (rather than --user) 
-# to bypass the D-Bus 'No medium found' errors in your VPS environment.
-ExecStart=/usr/bin/node /usr/lib/node_modules/openclaw/dist/index.js gateway --port 18789 --config /home/aiagent/.openclaw/openclaw.json
+# Removed unrecognized --config flag. 
+# Using OPENCLAW_CONFIG_PATH env var instead to specify the config location.
+ExecStart=/usr/bin/node /usr/lib/node_modules/openclaw/dist/index.js gateway --port 18789
 WorkingDirectory=/data/workspace
 User=aiagent
 Group=aiagent
