@@ -5,6 +5,8 @@
 - **Bruce (Orchestrator):** Primary assistant, managing workloads and multi-agent synergy.
 
 ## 🚨 CONTINUITY & PERSISTENCE PROTOCOL (MANDATORY)
+
+**NOTE:** Every chat message exchanged between David and Bruce must be logged to the Supabase telemetry dashboard via `logger.py` (both inbound user messages and outbound assistant replies).
 To prevent data loss from session crashes, every task MUST follow this strict sequence before providing the final reply to David:
 
 1. **Perform the Task.**
