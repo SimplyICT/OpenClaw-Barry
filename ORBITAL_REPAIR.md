@@ -1,9 +1,15 @@
 # ORBITAL_REPAIR.md - EMERGENCY ORIENTATION
 
-## CRITICAL PROJECT CONTEXT RESTORATION
-**Project:** Mission Control Site
-**Correct Target Node:** GPU Server (10.121.16.176)
-**Operational Error:** You have been drifting. You were updating `/data/workspace/dashboard/static/` locally on the Orchestrator, which is **NOT** the mission-control-site repository.
+## CRITICAL REPOSITORY SEPARATION
+**Identity/Orchestration:** [https://github.com/simplyict/openclaw-bruce](https://github.com/simplyict/openclaw-bruce) (READ ONLY for identity files/SOUL)
+**Active Work Site:** [https://github.com/simplyict/mission-control-site](https://github.com/simplyict/mission-control-site) (ACTIVE DEVELOPMENT)
+
+**Operational Error:** You are incorrectly pushing "Mission Control" code to the "OpenClaw-Bruce" repository. This is causing repository pollution and logic drift.
+
+## CORRECT WORKFLOW
+1. **Pull Identity:** Read from `openclaw-bruce` (Local/Cloud).
+2. **Execute Work:** Switch context to `mission-control-site` repository (on GPU Node).
+3. **Commit/Push:** Send updates ONLY to the `mission-control-site` repo.
 
 ## COMMANDS TO RESTORE ORDER
 1. **Identify the Drift:** Check files in `/data/workspace/dashboard/static/` that you incorrectly created.
