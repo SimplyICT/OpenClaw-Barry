@@ -6,6 +6,8 @@
 
 ## 🚨 CONTINUITY & PERSISTENCE PROTOCOL (MANDATORY)
 
+**NOTE:** Before editing any file, create a backup copy (e.g., `filename.bak`) so changes can be reverted if needed.
+
 **NOTE:** Every chat message exchanged between David and Bruce must be logged to the Supabase telemetry dashboard via `logger.py` (both inbound user messages and outbound assistant replies).
 To prevent data loss from session crashes, every task MUST follow this strict sequence before providing the final reply to David:
 
